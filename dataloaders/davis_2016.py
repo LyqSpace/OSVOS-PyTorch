@@ -14,10 +14,11 @@ class DAVIS2016(Dataset):
 
     def __init__(self, train=True,
                  inputRes=None,
-                 db_root_dir='/media/eec/external/Databases/Segmentation/DAVIS-2016',
+                 db_root_dir='/Ship01/Dataset/DAVIS-2016',
                  transform=None,
                  meanval=(104.00699, 116.66877, 122.67892),
-                 seq_name=None):
+                 seq_name=None,
+                 flood_flag=False):
         """Loads image to label pairs for tool pose estimation
         db_root_dir: dataset directory with subfolders "JPEGImages" and "Annotations"
         """
@@ -33,31 +34,50 @@ class DAVIS2016(Dataset):
         else:
             fname = 'val_seqs'
 
-        if self.seq_name is None:
+        if flood_flag:
+            
+            if self.seq_name is None:
+                print("seq_name is invalid.")
+                exit(1)
+            
+            names_img = os.listdir(os.path.join(db_root_dir, 'imgs/', str(seq_name)))
+            names_img.sort(key=len)
+            img_list = list(map(lambda x: os.path.join('imgs/', str(seq_name), x), names_img))
 
-            # Initialize the original DAVIS splits for training the parent network
-            with open(os.path.join(db_root_dir, fname + '.txt')) as f:
-                seqs = f.readlines()
-                img_list = []
-                labels = []
-                for seq in seqs:
-                    images = np.sort(os.listdir(os.path.join(db_root_dir, 'JPEGImages/480p/', seq.strip())))
-                    images_path = list(map(lambda x: os.path.join('JPEGImages/480p/', seq.strip(), x), images))
-                    img_list.extend(images_path)
-                    lab = np.sort(os.listdir(os.path.join(db_root_dir, 'Annotations/480p/', seq.strip())))
-                    lab_path = list(map(lambda x: os.path.join('Annotations/480p/', seq.strip(), x), lab))
-                    labels.extend(lab_path)
-        else:
-
-            # Initialize the per sequence images for online training
-            names_img = np.sort(os.listdir(os.path.join(db_root_dir, 'JPEGImages/480p/', str(seq_name))))
-            img_list = list(map(lambda x: os.path.join('JPEGImages/480p/', str(seq_name), x), names_img))
-            name_label = np.sort(os.listdir(os.path.join(db_root_dir, 'Annotations/480p/', str(seq_name))))
-            labels = [os.path.join('Annotations/480p/', str(seq_name), name_label[0])]
+            name_label = os.listdir(os.path.join(db_root_dir, 'labels/', str(seq_name)))
+            name_label.sort(key=len)
+            labels = [os.path.join('labels/', str(seq_name), name_label[0])]
             labels.extend([None]*(len(names_img)-1))
             if self.train:
                 img_list = [img_list[0]]
                 labels = [labels[0]]
+
+        else:
+            if self.seq_name is None:
+
+                # Initialize the original DAVIS splits for training the parent network
+                with open(os.path.join(db_root_dir, fname + '.txt')) as f:
+                    seqs = f.readlines()
+                    img_list = []
+                    labels = []
+                    for seq in seqs:
+                        images = np.sort(os.listdir(os.path.join(db_root_dir, 'JPEGImages/480p/', seq.strip())))
+                        images_path = list(map(lambda x: os.path.join('JPEGImages/480p/', seq.strip(), x), images))
+                        img_list.extend(images_path)
+                        lab = np.sort(os.listdir(os.path.join(db_root_dir, 'Annotations/480p/', seq.strip())))
+                        lab_path = list(map(lambda x: os.path.join('Annotations/480p/', seq.strip(), x), lab))
+                        labels.extend(lab_path)
+            else:
+
+                # Initialize the per sequence images for online training
+                names_img = np.sort(os.listdir(os.path.join(db_root_dir, 'JPEGImages/480p/', str(seq_name))))
+                img_list = list(map(lambda x: os.path.join('JPEGImages/480p/', str(seq_name), x), names_img))
+                name_label = np.sort(os.listdir(os.path.join(db_root_dir, 'Annotations/480p/', str(seq_name))))
+                labels = [os.path.join('Annotations/480p/', str(seq_name), name_label[0])]
+                labels.extend([None]*(len(names_img)-1))
+                if self.train:
+                    img_list = [img_list[0]]
+                    labels = [labels[0]]
 
         assert (len(labels) == len(img_list))
 
@@ -121,7 +141,7 @@ if __name__ == '__main__':
 
     transforms = transforms.Compose([tr.RandomHorizontalFlip(), tr.Resize(scales=[0.5, 0.8, 1]), tr.ToTensor()])
 
-    dataset = DAVIS2016(db_root_dir='/media/eec/external/Databases/Segmentation/DAVIS-2016',
+    dataset = DAVIS2016(db_root_dir='/Ship01/Dataset/DAVIS-2016',
                         train=True, transform=transforms)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True, num_workers=1)
 

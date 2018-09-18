@@ -3,6 +3,7 @@
 *.pdf
 models/*.pth
 models/runs/*
+models/Results/
 runs/*
 *.pth
 *.pyc
